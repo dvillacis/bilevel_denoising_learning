@@ -9,12 +9,23 @@ from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 
 class LearningModel(ABC):
-    def __init__(self,dataset:Dataset) -> None:
+    def __init__(self,dataset:Dataset, λ_init:int, α_init:int) -> None:
         super().__init__()
         self.dataset = dataset
+        self.λ = λ_init
+        self.α = α_init
+        self.den_list = None
 
     @abstractmethod
     def denoise(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def learn_data_parameter(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def learn_reg_parameter(self):
         raise NotImplementedError
 
     def save(self,out_path):
@@ -35,10 +46,7 @@ class LearningModel(ABC):
 
 class ScalarTVLearningModel(LearningModel):
     def __init__(self, dataset: Dataset, λ_init:int, α_init:int) -> None:
-        super().__init__(dataset)
-        self.λ = λ_init
-        self.α = α_init
-        self.den_list = None
+        super().__init__(dataset,λ_init,α_init)
 
     def denoise(self,niter=1000):
         self.den_list = []
@@ -54,3 +62,9 @@ class ScalarTVLearningModel(LearningModel):
             mu = 1 / np.sqrt(L)
             den = pyproximal.optimization.primaldual.PrimalDual(l2,l21,Gop,tau=tau,mu=mu,x0=np.zeros_like(noisy.ravel()),niter=niter,theta=1.)
             self.den_list.append(den.reshape(noisy.shape))
+
+    def learn_data_parameter(self):
+        pass
+
+    def learn_reg_parameter(self):
+        pass
