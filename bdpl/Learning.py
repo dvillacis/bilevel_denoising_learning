@@ -17,6 +17,22 @@ class LearningModel(ABC):
     def denoise(self):
         raise NotImplementedError
 
+    def save(self,out_path):
+        dendir = os.path.join(out_path,self.dataset.name)
+        if not os.path.isdir(dendir):
+            os.mkdir(dendir)
+        summarydir = os.path.join(dendir,'summary.txt')
+        with open(summarydir,'w') as f:
+            f.write(f'Optimal_parameter: α: {np.linalg.norm(self.α)}, λ: {np.linalg.norm(self.λ)}\n')
+            f.write(
+                'num \t ssim_data \t ssim_rec \t psnr_data \t psnr_rec \t l2_data \t l2_rec \n')
+            for i,den in enumerate(self.den_list):
+                img,noisy = self.dataset.get_pair(i)
+                f.write(f'{i:4} \t {ssim(img,noisy):.4f} \t {ssim(img,den):.4f} \t {psnr(img,noisy):.4f} \t {psnr(img,den):.4f} \t {np.linalg.norm(img.ravel()-noisy.ravel())**2:.4f} \t {np.linalg.norm(img.ravel()-den.ravel())**2:.4f}\n')
+                im = Image.fromarray(den*255).convert("L")
+                filedir = os.path.join(dendir,f'{self.dataset.name}_den_{i}.png')
+                im.save(filedir,format='png')
+
 class ScalarTVLearningModel(LearningModel):
     def __init__(self, dataset: Dataset, λ_init:int, α_init:int) -> None:
         super().__init__(dataset)
@@ -38,19 +54,3 @@ class ScalarTVLearningModel(LearningModel):
             mu = 1 / np.sqrt(L)
             den = pyproximal.optimization.primaldual.PrimalDual(l2,l21,Gop,tau=tau,mu=mu,x0=np.zeros_like(noisy.ravel()),niter=niter,theta=1.)
             self.den_list.append(den.reshape(noisy.shape))
-
-    def save(self,out_path):
-        dendir = os.path.join(out_path,self.dataset.name)
-        if not os.path.isdir(dendir):
-            os.mkdir(dendir)
-        summarydir = os.path.join(dendir,'summary.txt')
-        with open(summarydir,'w') as f:
-            f.write(f'Optimal_parameter: α: {np.linalg.norm(self.α)}, λ: {np.linalg.norm(self.λ)}\n')
-            f.write(
-                'num \t ssim_data \t ssim_rec \t psnr_data \t psnr_rec \t l2_data \t l2_rec \n')
-            for i,den in enumerate(self.den_list):
-                img,noisy = self.dataset.get_pair(i)
-                f.write(f'{i:4} \t {ssim(img,noisy):.4f} \t {ssim(img,den):.4f} \t {psnr(img,noisy):.4f} \t {psnr(img,den):.4f} \t {np.linalg.norm(img.ravel()-noisy.ravel())**2:.4f} \t {np.linalg.norm(img.ravel()-den.ravel())**2:.4f}\n')
-                im = Image.fromarray(den*255).convert("L")
-                filedir = os.path.join(dendir,f'{self.dataset.name}_den_{i}.png')
-                im.save(filedir,format='png')
