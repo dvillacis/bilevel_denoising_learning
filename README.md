@@ -7,6 +7,7 @@ This is the accompanying code for the PhD Thesis [X].
 ```bash
 $ conda create --name <env> --file requirements.txt 
 $ conda activate <env>
+$ pip install pyproximal
 ```
 
 ## Usage

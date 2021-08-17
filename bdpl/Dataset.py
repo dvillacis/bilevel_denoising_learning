@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from abc import ABC, abstractmethod
 from PIL import Image
 
@@ -54,4 +55,10 @@ class DirDataset(Dataset):
     def get_pair(self,i):
         if i > self.num_samples:
             raise ValueError(f'Dataset {self.name} only has {self.num_samples} samples...')
-        return self.pairs[i]
+        img = np.array(Image.open(self.pairs[i][0]).convert("L"))
+        img = img / np.max(img)
+        noisy = np.array(Image.open(self.pairs[i][1]).convert("L"))
+        noisy = noisy / np.max(noisy)
+        return img,noisy
+
+#TODO: Add dummy dataset with the black square
