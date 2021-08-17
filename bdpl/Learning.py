@@ -9,7 +9,7 @@ from skimage.metrics import structural_similarity as ssim
 from skimage.metrics import peak_signal_noise_ratio as psnr
 
 class LearningModel(ABC):
-    def __init__(self,dataset:Dataset, λ_init:int, α_init:int) -> None:
+    def __init__(self,dataset:Dataset, λ_init, α_init) -> None:
         super().__init__()
         self.dataset = dataset
         self.λ = λ_init
