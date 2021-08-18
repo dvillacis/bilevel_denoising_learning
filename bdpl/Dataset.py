@@ -61,4 +61,18 @@ class DirDataset(Dataset):
         noisy = noisy / np.max(noisy)
         return img,noisy
 
+    def get_original(self,i):
+        if i > self.num_samples:
+            raise ValueError(f'Dataset {self.name} only has {self.num_samples} samples...')
+        img = np.array(Image.open(self.pairs[i][0]).convert("L"))
+        img = img / np.max(img)
+        return img
+
+    def get_noisy(self,i):
+        if i > self.num_samples:
+            raise ValueError(f'Dataset {self.name} only has {self.num_samples} samples...')
+        noisy = np.array(Image.open(self.pairs[i][1]).convert("L"))
+        noisy = noisy / np.max(noisy)
+        return noisy
+
 #TODO: Add dummy dataset with the black square
