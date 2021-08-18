@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from bdpl.operators.IndexOp import ActiveOp, EpsOp, InactiveOp, NormOp
 import os
 from numpy.core.shape_base import vstack
 from pylops.basicoperators import FirstDerivative, HStack, Identity, VStack
@@ -35,7 +36,7 @@ class LearningModel(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def gradient(self):
+    def data_gradient(self):
         raise NotImplementedError
 
     @abstractmethod
@@ -76,7 +77,7 @@ class ScalarTVLearningModel(LearningModel):
             cost += np.linalg.norm(img.ravel()-den.ravel())**2
         return 0.5*cost
 
-    def denoise(self,niter=1000):
+    def denoise(self,niter=100):
         self.den_list = []
         for pair in self.dataset.pairs:
             noisy = np.array(Image.open(pair[1]).convert("L"))# grab image as grayscale
@@ -91,7 +92,7 @@ class ScalarTVLearningModel(LearningModel):
             den = pyproximal.optimization.primaldual.PrimalDual(l2,l21,Gop,tau=tau,mu=mu,x0=np.zeros_like(noisy.ravel()),niter=niter,theta=1.)
             self.den_list.append(den.reshape(noisy.shape))
 
-    def gradient(self):
+    def data_gradient(self):
         '''
         Gradient calculation for the scalar problem
         '''
@@ -104,6 +105,9 @@ class ScalarTVLearningModel(LearningModel):
         Kmy = FirstDerivative(ndims,dims=dims,dir=1,kind='backward')
         Kpx = FirstDerivative(ndims,dims=dims,dir=0,kind='forward')
         Kpy = FirstDerivative(ndims,dims=dims,dir=1,kind='forward')
+        Act = ActiveOp(den)
+        Inact = InactiveOp(den)
+        NK = NormOp(den)
         I = Identity(ndims)
         Z = pylops.Zero(ndims)
         A1 = HStack([self.λ*I,-Kmx,-Kmy])
@@ -113,13 +117,19 @@ class ScalarTVLearningModel(LearningModel):
         b = np.hstack((den.ravel()-img.ravel(),np.zeros(2*ndims)))
         x0 = np.zeros(3*ndims)
         x = pylops.optimization.solver.cgls(A,b,x0)
-        print(x)
+        #print(x)
         Kp = Gop(x[0][:ndims])
         Ku = Gop(den.ravel())
-        print(-prodesc(Ku,Kp))
+        #print(-prodesc(Ku,Kp))
+        return -prodesc(Ku,Kp)
 
     def learn_data_parameter(self):
-        pass
+        for i in range(100):
+            self.denoise()
+            g = self.data_gradient()
+            self.λ -= 0.1*g
+            print(f'Optimization step {i}: λ={self.λ}, cost={self.cost()}, grad={g}')
+
 
     def learn_reg_parameter(self):
         pass
